@@ -1,0 +1,95 @@
+<div id="rubbing-graph-experiment">
+  <style>
+    #rubbing-graph-experiment { display: grid; gap: calc(var(--font-size-base) * .75); color: var(--foreground); }
+    #rubbing-graph-experiment .graph-legend { display: flex; flex-wrap: wrap; gap: calc(var(--font-size-base) * .7); }
+    #rubbing-graph-experiment .graph-legend[hidden] { display: none; }
+    #rubbing-graph-experiment .graph-legend span { display: inline-flex; align-items: center; gap: calc(var(--font-size-base) * .25); }
+    #rubbing-graph-experiment .graph-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--mark); }
+    #rubbing-graph-experiment .graph-legend .line { width: 16px; height: 2px; border-radius: 0; }
+    #rubbing-graph-experiment .graph-legend .square { border-radius: 0; }
+    #rubbing-graph-experiment .graph-stage { width: 100%; max-width: 620px; margin: 0 auto; }
+    #rubbing-graph-experiment .graph-stage svg { width: 100%; height: auto; display: block; }
+    #rubbing-graph-experiment .graph-stats { min-height: 1.5em; }
+  </style>
+  <h3>三张拓片的实际骨架提取</h3>
+  <div class="viz-controls">
+    <label class="form-label">样本
+      <select class="form-select" id="rg-sample" aria-label="选择拓片">
+        <option value="0">图一</option><option value="1" selected>图二</option><option value="2">图三（含长裂纹）</option>
+      </select>
+    </label>
+    <label class="form-label">处理方式
+      <select class="form-select" id="rg-clean" aria-label="选择去噪程度">
+        <option value="raw">基础提取</option><option value="clean" selected>轻度去噪与剪枝</option>
+      </select>
+    </label>
+    <label class="form-label">显示
+      <select class="form-select" id="rg-view" aria-label="选择显示层">
+        <option value="image">原拓片</option><option value="mask">二值图</option><option value="overlay" selected>叠加骨架</option>
+      </select>
+    </label>
+  </div>
+  <div class="graph-legend text-small" id="rg-legend">
+    <span><i class="line" style="--mark:var(--blue)"></i>骨架路径</span>
+    <span><i style="--mark:var(--green)"></i>几何端点</span>
+    <span><i class="square" style="--mark:var(--red)"></i>分叉节点</span>
+    <span><i style="--mark:var(--orange)"></i>路径采样点</span>
+    <span><i style="--mark:var(--purple)"></i>前景面积质心</span>
+  </div>
+  <div class="graph-stage" id="rg-stage"></div>
+  <div class="graph-stats text-small" id="rg-stats" aria-live="polite"></div>
+  <script type="application/json" id="rg-data">__GRAPH_DATA__</script>
+  <script>
+    (() => {
+      const root = document.getElementById('rubbing-graph-experiment');
+      const data = JSON.parse(root.querySelector('#rg-data').textContent);
+      const sample = root.querySelector('#rg-sample');
+      const clean = root.querySelector('#rg-clean');
+      const view = root.querySelector('#rg-view');
+      const stage = root.querySelector('#rg-stage');
+      const stats = root.querySelector('#rg-stats');
+      const legend = root.querySelector('#rg-legend');
+      function restore(snapshot) {
+        const state = snapshot?.modelContent;
+        if (!state) return;
+        if ([0,1,2].includes(state.sample)) sample.value = String(state.sample);
+        if (['raw','clean'].includes(state.processing)) clean.value = state.processing;
+        if (['image','mask','overlay'].includes(state.view)) view.value = state.view;
+      }
+      function draw() {
+        const item = data[Number(sample.value)];
+        const graph = item.variants[clean.value];
+        const overlay = view.value === 'overlay';
+        const img = view.value === 'mask' ? graph.mask : item.image;
+        let content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${item.width} ${item.height}" role="img" aria-label="图${item.id}，${view.options[view.selectedIndex].text}；几何骨架不代表真实笔顺"><title>从原拓片独立计算的几何骨架</title><rect width="100%" height="100%" fill="var(--background)"/><image href="${img}" width="${item.width}" height="${item.height}" opacity="${overlay ? '.42' : '1'}"/>`;
+        if (overlay) {
+          for (const e of graph.edges) {
+            content += `<polyline points="${e.p.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linejoin="round"/>`;
+            for (const [x,y] of e.s) content += `<circle cx="${x}" cy="${y}" r="2.9" fill="var(--orange)" stroke="var(--background)" stroke-width="1"/>`;
+          }
+          for (const n of graph.nodes) {
+            if (n.type === 'junction') content += `<rect x="${n.x-3.4}" y="${n.y-3.4}" width="6.8" height="6.8" rx="1" fill="var(--red)" stroke="var(--background)" stroke-width="1"/>`;
+            else content += `<circle cx="${n.x}" cy="${n.y}" r="${n.type==='isolated'?2.3:3.5}" fill="${n.type==='endpoint'?'var(--green)':n.type==='isolated'?'var(--muted-foreground)':'var(--orange)'}" stroke="var(--background)" stroke-width="1"/>`;
+          }
+          if (graph.centroid_xy) {
+            const [x,y] = graph.centroid_xy;
+            content += `<path d="M0 ${y}H${item.width} M${x} 0V${item.height}" fill="none" stroke="var(--purple)" stroke-width="1.2" stroke-dasharray="8 6"/><circle cx="${x}" cy="${y}" r="6.5" fill="none" stroke="var(--purple)" stroke-width="1.7"/>`;
+          }
+        }
+        stage.innerHTML = content + '</svg>';
+        legend.hidden = !overlay;
+        const s = graph.statistics;
+        stats.textContent = `${s.nodes} 个几何节点 · ${s.edges} 条骨架边 · ${s.components} 个连通分量（均非笔画数量）`;
+      }
+      function change() {
+        draw();
+        try {
+          localStorage.setItem('hanzi-skeleton-view-v1', JSON.stringify({modelContent:{sample:Number(sample.value),processing:clean.value,view:view.value}}));
+        } catch (_) { /* File URLs and private browsing may disable storage. */ }
+      }
+      try { restore(JSON.parse(localStorage.getItem('hanzi-skeleton-view-v1'))); } catch (_) {}
+      for (const input of [sample,clean,view]) input.addEventListener('change',change);
+      draw();
+    })();
+  </script>
+</div>

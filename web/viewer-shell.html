@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Hanzi Skeleton · 拓片骨架分析</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --font-size-base: 14px;
+      --background: #ffffff;
+      --foreground: #22252a;
+      --muted-foreground: #69717d;
+      --border: #cdd2d9;
+      --blue: #2474b8;
+      --green: #128362;
+      --red: #d42957;
+      --orange: #bf710b;
+      --purple: #943ab2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #191b1f;
+        --foreground: #f0f1f4;
+        --muted-foreground: #a4adba;
+        --border: #49505c;
+        --blue: #66b3f1;
+        --green: #48d4a3;
+        --red: #ff7b9a;
+        --orange: #ffbd63;
+        --purple: #d5a0f1;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: var(--background);
+      color: var(--foreground);
+      font: 14px/1.5 system-ui, -apple-system, "PingFang SC", sans-serif;
+    }
+    main { max-width: 900px; margin: 0 auto; }
+    h3 { margin: 0; font-size: 18px; font-weight: 500; }
+    .viz-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+    .form-label { display: grid; gap: 5px; flex: 1 1 180px; }
+    .form-select {
+      width: 100%; min-height: 40px; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--foreground); background: var(--background); font: inherit;
+    }
+    .text-small { font-size: 12px; }
+    @media (max-width: 520px) {
+      body { padding: 16px 12px; }
+      .form-label { flex-basis: 100%; }
+      .form-select { min-height: 44px; font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+__VIEWER_FRAGMENT__
+  </main>
+</body>
+</html>

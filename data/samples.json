@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "source_note": "User-provided reference images; use only the upper original rubbing for analysis. Crops were chosen manually.",
+  "samples": [
+    {
+      "id": "sample1",
+      "label": "图1",
+      "source": "original/sample1.jpg",
+      "original_attachment": "codex-clipboard-f7ef5f9c-b302-4c8a-98d5-bfb07fa5d188.jpg",
+      "sha256": "02a0669b6d77169d6dabbd7b5c9b3f858342f590f458b4bf41dbd800b0dc825a",
+      "crop_box": [
+        12,
+        12,
+        732,
+        732
+      ]
+    },
+    {
+      "id": "sample2",
+      "label": "图2",
+      "source": "original/sample2.jpg",
+      "original_attachment": "codex-clipboard-84fb4746-dcb0-4ca0-9ef1-da9f54782c18.jpg",
+      "sha256": "7c75c814807e506e8d3ce109651c777084a7208cbe97f40e26aedda9d9928345",
+      "crop_box": [
+        12,
+        12,
+        732,
+        701
+      ]
+    },
+    {
+      "id": "sample3",
+      "label": "图3",
+      "source": "original/sample3.jpg",
+      "original_attachment": "codex-clipboard-24de9a94-efcf-43c5-97a4-7149da8cadf6.jpg",
+      "sha256": "f5d9429af506a0b250bfc8c4c99b3387008e0a9e4cef757c30a6fcb93311ea83",
+      "crop_box": [
+        12,
+        12,
+        726,
+        726
+      ]
+    }
+  ]
+}
