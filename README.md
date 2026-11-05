@@ -8,25 +8,25 @@
 
 ## 快速开始
 
-要求 Python 3.12 或更高版本；本次复现使用 Python 3.12.14。先在项目目录安装：
+使用 [uv](https://docs.astral.sh/uv/) 管理依赖，要求 Python 3.12 或更高版本（uv 会按 `.python-version` 自动获取解释器）。在项目目录安装：
 
 ```bash
-python3.12 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m pip install --no-deps -e .
+uv sync
 ```
+
+依赖由 `pyproject.toml` 声明、`uv.lock` 锁定；直接依赖与传递依赖的版本均与本次复现环境一致。
 
 处理已有样本：
 
 ```bash
-.venv/bin/hanzi-skeleton data/original/sample2.jpg \
+uv run hanzi-skeleton data/original/sample2.jpg \
   --crop 12 12 732 701 --out work/sample2
 ```
 
 也可以直接运行脚本：
 
 ```bash
-.venv/bin/python rubbing_graph.py data/original/sample2.jpg \
+uv run python rubbing_graph.py data/original/sample2.jpg \
   --crop 12 12 732 701 --out work/sample2
 ```
 
@@ -37,7 +37,7 @@ python3.12 -m venv .venv
 ## 重建全部结果
 
 ```bash
-.venv/bin/python scripts/build_demo.py
+uv run python scripts/build_demo.py
 ```
 
 脚本从项目内的原始图片和裁切记录生成三组 `raw`/`clean` 结果、对比图、统计摘要与交互页面。可从任意工作目录调用，默认输出总是项目内的 `results/`；用 `--out work/reproduced` 可以输出到其他目录。
@@ -53,8 +53,8 @@ open results/index.html
 ```text
 hanzi-skeleton/
 ├── rubbing_graph.py          # 分割、骨架、图构建、导出与 CLI
-├── pyproject.toml            # 包信息和 hanzi-skeleton 命令入口
-├── requirements.txt          # 本次复现的固定依赖版本
+├── pyproject.toml            # 包信息、依赖声明和 hanzi-skeleton 命令入口
+├── uv.lock                   # 锁定的依赖版本（含传递依赖）
 ├── scripts/build_demo.py     # 批量复现、数据校验和页面构建
 ├── data/
 │   ├── original/             # 用户提供的三张完整参考图片

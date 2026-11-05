@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Rubbing bitmap -> geometric skeleton graph (not historical stroke order).
 
-Python 3.12; pip install numpy pillow scipy scikit-image networkx sknw
-Example: python rubbing_graph.py input.jpg --crop 12 12 732 732 --out result
+Python 3.12; uv sync (deps declared in pyproject.toml, locked in uv.lock)
+Example: uv run python rubbing_graph.py input.jpg --crop 12 12 732 732 --out result
 Outputs: input crop, mask, skeleton, overlay PNG, overlay SVG, graph JSON.
 Coordinates: crop-local pixels, x rightwards, y downwards. Edges are undirected.
 """
