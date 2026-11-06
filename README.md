@@ -1,6 +1,6 @@
 # Hanzi Skeleton
 
-将碑刻拓片的亮色字形提取为几何骨架，并导出节点、路径、长度及估计宽度。提供命令行工具、三张真实拓片的复现实验和独立交互查看器。
+将碑刻拓片的亮色字形提取为几何骨架，并导出节点、路径、长度及估计宽度。提供命令行工具、纯浏览器单页应用、三张真实拓片的复现实验和独立交互查看器。
 
 本项目实现的是几何分析，不包含汉字识别、真实笔画分离、起收笔判断或笔顺恢复。蓝线不等于历史运笔轨迹，残留的裂纹和石花也可能进入图结构。
 
@@ -34,6 +34,22 @@ uv run python rubbing_graph.py data/original/sample2.jpg \
 
 `--crop` 顺序为左、上、右、下，右、下不包含；已裁好的单字图片可省略。当前处理方向为亮字暗底，黑字白底需先反相。面积和长度参数以约 700 像素宽图片为基准。
 
+## 浏览器版（无需安装）
+
+直接打开 [web/app.html](web/app.html)（本地双击或任意静态服务均可，需与 `web/pipeline.js` 同目录）：
+
+- 选择、拖入或粘贴拓片照片，在图上拖框裁切单字；黑字白底可勾选「反相」（默认按裁切区域自动猜测）。
+- 全部计算在浏览器本地完成，图片不上传；720×720 图片约零点几秒。
+- 支持轻度去噪与剪枝两种方式及 `min-area`、`prune-px` 参数，可导出与命令行一致的 `graph.json`、`overlay.svg`、`mask.png`、`skeleton.png`。
+- 页面内置程序生成的合成示例字，可直接试用；受权限制约，页面不附带三张真实样本图。
+
+浏览器版是 `rubbing_graph.py` 的逐阶段等价移植（[web/pipeline.js](web/pipeline.js)，零依赖）：在三张样本 × 两种处理方式上，高斯平滑、Otsu 阈值与距离变换与参考实现 bit 级一致，二值图、Zhang 骨架逐像素零差异，图结构（节点、边、统计）完全相同。已知偏差：浏览器与 PIL 的 JPEG 解码器存在 ±1 灰度差，直接处理未量化的原图时边界像素可能少量不同。复现对比：
+
+```bash
+uv run python scripts/compare_port.py   # 导出 Python 参考的各阶段中间结果
+node scripts/compare_port.mjs           # JS 移植逐阶段比对并输出报告
+```
+
 ## 重建全部结果
 
 ```bash
@@ -52,14 +68,19 @@ open results/index.html
 
 ```text
 hanzi-skeleton/
-├── rubbing_graph.py          # 分割、骨架、图构建、导出与 CLI
+├── rubbing_graph.py          # 分割、骨架、图构建、导出与 CLI（参考实现）
 ├── pyproject.toml            # 包信息、依赖声明和 hanzi-skeleton 命令入口
 ├── uv.lock                   # 锁定的依赖版本（含传递依赖）
-├── scripts/build_demo.py     # 批量复现、数据校验和页面构建
+├── scripts/
+│   ├── build_demo.py         # 批量复现、数据校验和页面构建
+│   ├── compare_port.py       # 导出 Python 参考的逐阶段中间结果
+│   └── compare_port.mjs      # 浏览器移植与参考实现的逐阶段对拍
 ├── data/
 │   ├── original/             # 用户提供的三张完整参考图片
 │   └── samples.json          # 文件来源、SHA-256 和人工裁切框
 ├── web/
+│   ├── app.html              # 纯浏览器单页应用（上传/裁切/参数/导出）
+│   ├── pipeline.js           # analyze 全管线的零依赖 JS 移植
 │   ├── graph.fragment.html   # 查看器内容与交互代码
 │   └── viewer-shell.html     # 独立页面外壳及样式
 ├── results/

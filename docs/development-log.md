@@ -68,3 +68,30 @@
 
 这些检查验证迁移和几何输出的一致性，不等于书法笔画识别准确率。骨架仍有毛刺分支、裂纹和石花；简单剪枝也可能移除真实笔锋。当前没有人工标注的真实笔画、笔顺或审美重心作为评测标准。
 
+
+## 浏览器移植（web/app.html + web/pipeline.js）
+
+将 `rubbing_graph.py` 的 `analyze()` 全管线移植为零依赖 JavaScript（`web/pipeline.js`，UMD，可 `require` 也可 `<script>` 引入），并包装为纯本地单页应用 `web/app.html`：上传/拖入/粘贴图片、拖框裁切、参数面板（处理方式、min-area、prune-px、反相）、SVG 叠加渲染与 graph.json/overlay.svg/mask.png/skeleton.png 导出。Python 参考实现与命令行保持原样，作为对拍基准。
+
+为做到逐阶段等价，移植前先精读了锁定版本依赖的源码并逐一复刻其数值语义：
+
+- PIL `convert('L')`：整数公式 `(19595R + 38470G + 7471B + 0x8000) >> 16`（已用随机像素对拍验证逐点相等）。
+- `skimage.filters.gaussian`：scipy 1.18 的 `_gaussian_kernel1d`（`exp(-0.5/σ²·x²)`、numpy 9 元素 pairwise 求和归一化）+ `NI_Correlate1D` 对称核路径的「中心项优先、外对在内成对 `(x[-k]+x[k])·w[-k]`」累加序。
+- `skimage.filters.threshold_otsu`：256 箱 `np.histogram` 浮点分箱（`floor((v-min)·norm)` 截到末箱）、bin 中心取 `(edges[i]+edges[i+1])/2`、cumsum 顺序与首个 argmax。
+- `scipy.ndimage.distance_transform_edt`：精确 EDT（Felzenszwalb 下包络）。关键语义：**数组外不算背景**；行/列内无背景的抛物线（f=∞）不进入下包络。最初的「虚拟背景环」实现导致贴边笔画距离偏小、剪枝结果偏离，全前景行的 ∞ 抛物线还会污染包络栈，两处都已修正。
+- `skimage.morphology.closing(disk(1), mode='ignore')`：十字结构元膨胀（越界邻域按 0，即忽略）+ 腐蚀（越界按 1，即忽略）。
+- Zhang 骨架化：按 v0.26.0 源码逐字移植 256 项查找表与「每子迭代冻结快照、并行删除」的两阶段语义。
+- sknw：mark/fill/trace/parse_struc 逐函数移植，保留光栅扫描序、邻居序（NW N NE W E SW S SE，trace 的 newp 后到者优先）与 `idx2rc` 的 -1 还原；自环按 networkx 语义度数计 2。
+- networkx MultiGraph：边迭代按「主节点升序分组、邻接插入序、键序」，yield 方向为 (先出现节点, 邻接点)；自环度数 +2；`build_graph` 先把边端点吸附到取整质心（numpy round 为 half-even）再计权重。
+
+移植中发现并修复的三个隐蔽差异，均由对拍暴露：
+
+1. EDT 边界语义（见上），症状为 clean 变体统计数不符。
+2. scipy 对称相关的累加顺序：即便核与输入完全相同，arm64 版 scipy 二进制将累加编译为 FMA（单次舍入），普通双精度乘加慢一位 ULP 并传染到 Otsu 阈值。用 Dekker twoProduct + Kahan twoSum 实现软件 FMA 后逐位一致。注意这是相对特定平台二进制的精确性；不同平台编译的 scipy 之间本身也存在末位差。
+3. networkx 边迭代方向：EdgeView 以「先出现的端点」为第一元素 yield，与 sknw 的建边方向无关。
+
+对拍工具：`scripts/compare_port.py` 导出每样本每变体的 gray/smooth/threshold/mask0/mask/distance/skeleton0/skeleton/graph.json 至 `work/port-ref/`，`scripts/compare_port.mjs`（Node，直接 `require` pipeline.js）逐阶段比对。三张样本 × raw/clean 的最终结果：高斯平滑、Otsu 阈值、距离变换 max|Δ| 全为 0（bit 级）；二值图与 Zhang 骨架 0 像素差异；statistics、节点表、边表（含端点、键、长度、坐标、采样点）、质心、参数完全相同。浏览器（V8）内注入参考灰度重跑亦逐字段一致。
+
+已知且接受的差异：浏览器与 PIL 的 JPEG 解码器 IDCT 实现有 ±1 灰度差；浏览器对手机照片默认应用 EXIF 方向而 PIL 不应用。两者只影响「从原图解码」这一步，不影响算法本身；对拍通过注入相同的灰度字节消除该变量。页面处理尺寸上限 1000px（等比缩放），因为参数以约 700px 宽为基准；超过时页面会提示。
+
+浏览器版 UI 验证：合成示例（含横、撇、竖弯钩、方框环、点与石花噪声）端到端渲染正确，骨架沿笔画中心、方框形成闭合环、节点/采样点/质心可见；真实样本拖入、裁切 720×720、反相自动猜测（基于裁切区域而非整图，避免明亮纸边误导；用户手动修改后不再覆盖）、提取与导出按钮均工作正常。页面内置合成示例而未附带真实样本图，因 README 已说明后者不具再发布授权。

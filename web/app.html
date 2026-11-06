@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Hanzi Skeleton · 拓片骨架分析（浏览器版）</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --background: #ffffff;
+    --surface: #f4f5f7;
+    --foreground: #22252a;
+    --muted-foreground: #69717d;
+    --border: #cdd2d9;
+    --blue: #2474b8;
+    --green: #128362;
+    --red: #d42957;
+    --orange: #bf710b;
+    --purple: #943ab2;
+    --gray: #77818c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: #191b1f;
+      --surface: #22252b;
+      --foreground: #f0f1f4;
+      --muted-foreground: #a4adba;
+      --border: #49505c;
+      --blue: #66b3f1;
+      --green: #48d4a3;
+      --red: #ff7b9a;
+      --orange: #ffbd63;
+      --purple: #d5a0f1;
+      --gray: #9aa4b0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 48px;
+    background: var(--background);
+    color: var(--foreground);
+    font: 14px/1.5 system-ui, -apple-system, "PingFang SC", sans-serif;
+  }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 24px 0 8px; }
+  .sub { color: var(--muted-foreground); font-size: 12.5px; margin: 0 0 16px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label.field { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted-foreground); }
+  select, input[type="number"] {
+    min-height: 36px; padding: 4px 8px; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--foreground); background: var(--background);
+    font: inherit; min-width: 110px;
+  }
+  button {
+    min-height: 38px; padding: 6px 16px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--background); color: var(--foreground);
+    font: inherit; cursor: pointer;
+  }
+  button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  button:active { transform: translateY(1px); }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .hint { font-size: 12px; color: var(--muted-foreground); margin-top: 8px; }
+  .drop {
+    border: 1.5px dashed var(--border); border-radius: 8px; padding: 22px;
+    text-align: center; color: var(--muted-foreground); cursor: pointer;
+  }
+  .drop.over { border-color: var(--blue); color: var(--blue); }
+  #crop-stage, #result-stage { text-align: center; }
+  #crop-canvas, #result-svg {
+    max-width: 100%; height: auto; border: 1px solid var(--border);
+    border-radius: 6px; touch-action: none; background:
+      repeating-conic-gradient(var(--surface) 0 25%, var(--background) 0 50%) 0 0/20px 20px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted-foreground); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend .line { width: 16px; height: 2px; border-radius: 0; }
+  .legend .square { border-radius: 0; }
+  .stats { min-height: 1.4em; font-size: 12.5px; color: var(--muted-foreground); }
+  .progress { font-size: 12.5px; color: var(--blue); min-height: 1.4em; }
+  .exports { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  footer { margin-top: 28px; font-size: 12px; color: var(--muted-foreground); }
+  footer a { color: var(--blue); }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) {
+    body { padding: 14px 10px 40px; }
+    label.field { flex: 1 1 45%; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>拓片字形骨架分析</h1>
+  <p class="sub">在浏览器本地把亮色字形提取为几何骨架图。图片不会上传；蓝线是几何中心线，不是历史笔顺，节点数也不是笔画数。</p>
+
+  <div class="card" id="input-card">
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="选择或拖入图片">
+      点击选择图片、拖入或粘贴（Ctrl/⌘+V）拓片照片；也可以先
+      <button type="button" id="demo-btn" style="min-height:0;padding:2px 8px">载入合成示例</button>
+    </div>
+    <p class="hint">要求亮字暗底；黑字白底请勾选「反相」。面积、长度参数以约 700 像素宽的图片为基准。</p>
+  </div>
+
+  <div class="card" id="crop-card" hidden>
+    <h2 style="margin-top:0">裁切单字 <span class="sub" style="display:inline">（在图上拖一个框，留空则处理全图）</span></h2>
+    <div id="crop-stage"><canvas id="crop-canvas"></canvas></div>
+    <div class="row" style="margin-top:10px">
+      <button type="button" id="crop-reset">重置为全图</button>
+      <span class="hint" id="crop-info" style="margin:0 0 0 auto"></span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="field">处理方式
+        <select id="opt-clean">
+          <option value="clean" selected>轻度去噪与剪枝</option>
+          <option value="raw">基础提取</option>
+        </select>
+      </label>
+      <label class="field">最小连通面积 px
+        <input type="number" id="opt-min-area" value="80" min="0" step="10">
+      </label>
+      <label class="field">剪枝长度 px
+        <input type="number" id="opt-prune" value="12" min="0" step="1">
+      </label>
+      <label class="check" style="padding-bottom:8px"><input type="checkbox" id="opt-invert"> 反相（黑字白底）</label>
+      <button type="button" class="primary" id="run-btn" style="margin-left:auto">提取骨架</button>
+    </div>
+    <p class="progress" id="progress" aria-live="polite"></p>
+  </div>
+
+  <div class="card" id="result-card" hidden>
+    <div class="row" style="margin-top:0">
+      <label class="field">显示
+        <select id="view">
+          <option value="overlay" selected>叠加骨架</option>
+          <option value="image">原图</option>
+          <option value="mask">二值图</option>
+          <option value="skeleton">骨架图</option>
+        </select>
+      </label>
+      <div class="legend" id="legend" style="margin-left:auto">
+        <span><i class="line" style="background:var(--blue)"></i>骨架路径</span>
+        <span><i style="background:var(--green)"></i>几何端点</span>
+        <span><i class="square" style="background:var(--red)"></i>分叉节点</span>
+        <span><i style="background:var(--orange)"></i>路径采样点</span>
+        <span><i style="background:var(--purple)"></i>前景质心</span>
+      </div>
+    </div>
+    <div id="result-stage"></div>
+    <p class="stats" id="stats" aria-live="polite"></p>
+    <div class="exports">
+      <button type="button" data-dl="graph.json">下载 graph.json</button>
+      <button type="button" data-dl="overlay.svg">下载 overlay.svg</button>
+      <button type="button" data-dl="mask.png">下载 mask.png</button>
+      <button type="button" data-dl="skeleton.png">下载 skeleton.png</button>
+    </div>
+  </div>
+
+  <footer>
+    本页为纯前端实现：算法与命令行版 rubbing_graph.py 逐阶段对齐，可在仓库中用
+    <code>uv run python scripts/compare_port.py &amp;&amp; node scripts/compare_port.mjs</code>
+    复现两者在三张样本上的对比。页面可离线打开（需与 pipeline.js 同目录）。
+  </footer>
+</main>
+
+<script src="pipeline.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const drop = $('drop'), demoBtn = $('demo-btn');
+  const cropCard = $('crop-card'), cropCanvas = $('crop-canvas'), cropInfo = $('crop-info');
+  const cropCtx = cropCanvas.getContext('2d');
+  const runBtn = $('run-btn'), progress = $('progress');
+  const resultCard = $('result-card'), stage = $('result-stage'), statsEl = $('stats');
+  const viewSel = $('view'), legend = $('legend');
+
+  const state = {
+    source: null,        // HTMLImageElement or canvas of the loaded picture
+    sourceW: 0, sourceH: 0,
+    crop: null,          // {x, y, w, h} in source pixels, null = full image
+    busy: false,
+    output: null,        // { result, mask, skeleton, gray, width, height, imageDataUrl }
+    cropDrag: null,
+    invertTouched: false,
+  };
+  const MAX_SIDE = 1000;  // processing cap so parameters stay near their 700px calibration
+
+  // Yield to the event loop so progress text paints; requestAnimationFrame
+  // alone never fires in hidden tabs, so fall back to a plain timer.
+  const frame = () => Promise.race([
+    new Promise((r) => requestAnimationFrame(() => r())),
+    new Promise((r) => setTimeout(r, 30)),
+  ]);
+
+  /* ---------------- input loading ---------------- */
+
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type)) { alert('请选择图片文件'); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); acceptImage(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('图片解码失败'); };
+    img.src = url;
+  }
+
+  function acceptImage(source) {
+    state.source = source;
+    state.sourceW = source.naturalWidth || source.width;
+    state.sourceH = source.naturalHeight || source.height;
+    state.crop = null;
+    state.invertTouched = false;
+    guessInvert();
+    cropCard.hidden = false;
+    resultCard.hidden = true;
+    drawCrop();
+  }
+
+  // Heuristic evaluated on the CURRENT crop region (a bright paper margin
+  // around a dark rubbing panel would fool a whole-image guess): rubbings are
+  // bright glyph on dark ground, so a dark ring around a brighter centre
+  // means "no invert needed".
+  function guessInvert() {
+    if (!state.source || state.invertTouched) return;
+    const r = state.crop || { x: 0, y: 0, w: state.sourceW, h: state.sourceH };
+    const c = document.createElement('canvas');
+    const s = Math.min(1, 160 / Math.max(r.w, r.h));
+    c.width = Math.max(2, Math.round(r.w * s));
+    c.height = Math.max(2, Math.round(r.h * s));
+    const ctx = c.getContext('2d');
+    ctx.drawImage(state.source, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    let ringSum = 0, ringN = 0, cenSum = 0, cenN = 0;
+    const band = Math.max(1, Math.round(Math.min(c.width, c.height) * 0.08));
+    const x0 = c.width >> 2, y0 = c.height >> 2, x1 = c.width - x0, y1 = c.height - y0;
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        const l = HanziSkeleton.pilLuma(d[(y * c.width + x) * 4], d[(y * c.width + x) * 4 + 1], d[(y * c.width + x) * 4 + 2]);
+        if (x < band || y < band || x >= c.width - band || y >= c.height - band) { ringSum += l; ringN++; }
+        else if (x >= x0 && x < x1 && y >= y0 && y < y1) { cenSum += l; cenN++; }
+      }
+    }
+    const ring = ringSum / ringN, cen = cenSum / cenN;
+    $('opt-invert').checked = ring > cen;  // bright frame around darker glyph = black-on-white
+  }
+
+  // Procedural demo: bright thick strokes on dark ground with speckles,
+  // so the page can be tried without redistributing the reference photos.
+  function makeDemo() {
+    const c = document.createElement('canvas');
+    c.width = 720; c.height = 720;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#1d1f22';
+    ctx.fillRect(0, 0, 720, 720);
+    ctx.strokeStyle = '#e8e4da';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 26;
+    // 横
+    ctx.beginPath(); ctx.moveTo(120, 180); ctx.lineTo(610, 180); ctx.stroke();
+    // 撇
+    ctx.beginPath(); ctx.moveTo(300, 130); ctx.lineTo(160, 420); ctx.stroke();
+    // 竖弯钩
+    ctx.beginPath(); ctx.moveTo(430, 150); ctx.lineTo(430, 400);
+    ctx.quadraticCurveTo(430, 560, 620, 540); ctx.stroke();
+    // 口（环）
+    ctx.lineWidth = 20;
+    ctx.beginPath(); ctx.rect(180, 480, 220, 170); ctx.stroke();
+    // 点
+    ctx.beginPath(); ctx.arc(560, 300, 20, 0, 7); ctx.fill();
+    // 石花噪声 + 淡纹理
+    let seed = 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    ctx.fillStyle = '#cfcabc';
+    for (let i = 0; i < 260; i++) {
+      const x = rnd() * 720, y = rnd() * 720, r = rnd() * 3.2;
+      ctx.globalAlpha = 0.25 + 0.75 * rnd();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const img = new Image();
+    img.onload = () => acceptImage(img);
+    img.src = c.toDataURL('image/png');
+  }
+
+  /* ---------------- crop selection ---------------- */
+
+  function displayScale() { return cropCanvas.width / cropCanvas.clientWidth; }
+
+  function drawCrop() {
+    const maxW = Math.min(660, document.querySelector('main').clientWidth - 34);
+    const scale = Math.min(1, maxW / state.sourceW, 520 / state.sourceH);
+    cropCanvas.width = Math.round(state.sourceW * scale);
+    cropCanvas.height = Math.round(state.sourceH * scale);
+    cropCtx.drawImage(state.source, 0, 0, cropCanvas.width, cropCanvas.height);
+    if (state.crop) {
+      const s = cropCanvas.width / state.sourceW;
+      cropCtx.save();
+      cropCtx.fillStyle = 'rgba(0,0,0,.45)';
+      cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+      cropCtx.drawImage(state.source,
+        state.crop.x * s, state.crop.y * s, state.crop.w * s, state.crop.h * s,
+        state.crop.x * s, state.crop.y * s, state.crop.w * s, state.crop.h * s);
+      cropCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--blue');
+      cropCtx.lineWidth = 2;
+      cropCtx.strokeRect(state.crop.x * s, state.crop.y * s, state.crop.w * s, state.crop.h * s);
+      cropCtx.restore();
+    }
+    updateCropInfo();
+  }
+
+  function updateCropInfo() {
+    const w = state.crop ? state.crop.w : state.sourceW;
+    const h = state.crop ? state.crop.h : state.sourceH;
+    const note = Math.max(w, h) > MAX_SIDE
+      ? `（超过 ${MAX_SIDE}px，将等比缩放后处理）` : '';
+    cropInfo.textContent = `处理区域 ${Math.round(w)}×${Math.round(h)} px${note}`;
+  }
+
+  function canvasPoint(ev) {
+    const r = cropCanvas.getBoundingClientRect();
+    const px = ev.clientX !== undefined ? ev.clientX : (ev.touches && ev.touches[0].clientX);
+    const py = ev.clientY !== undefined ? ev.clientY : (ev.touches && ev.touches[0].clientY);
+    return {
+      x: Math.min(state.sourceW - 1, Math.max(0, (px - r.left) * state.sourceW / r.width)),
+      y: Math.min(state.sourceH - 1, Math.max(0, (py - r.top) * state.sourceH / r.height)),
+    };
+  }
+
+  function cropStart(ev) { state.cropDrag = { a: canvasPoint(ev) }; ev.preventDefault(); }
+  function cropMove(ev) {
+    if (!state.cropDrag) return;
+    const b = canvasPoint(ev), a = state.cropDrag.a;
+    state.crop = {
+      x: Math.min(a.x, b.x), y: Math.min(a.y, b.y),
+      w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y),
+    };
+    drawCrop();
+    ev.preventDefault();
+  }
+  function cropEnd() {
+    if (state.cropDrag && state.crop && (state.crop.w < 8 || state.crop.h < 8)) state.crop = null;
+    state.cropDrag = null;
+    drawCrop();
+    guessInvert();   // the crop region decides bright-on-dark vs the reverse
+  }
+  cropCanvas.addEventListener('mousedown', cropStart);
+  cropCanvas.addEventListener('mousemove', cropMove);
+  window.addEventListener('mouseup', cropEnd);
+  cropCanvas.addEventListener('touchstart', cropStart, { passive: false });
+  cropCanvas.addEventListener('touchmove', cropMove, { passive: false });
+  cropCanvas.addEventListener('touchend', cropEnd);
+  $('crop-reset').addEventListener('click', () => { state.crop = null; drawCrop(); guessInvert(); });
+  $('opt-invert').addEventListener('change', () => { state.invertTouched = true; });
+
+  /* ---------------- pipeline run ---------------- */
+
+  async function run() {
+    if (state.busy) return;
+    state.busy = true;
+    runBtn.disabled = true;
+    try {
+      const clean = $('opt-clean').value === 'clean';
+      const minArea = Math.max(0, parseInt($('opt-min-area').value, 10) || 0);
+      const prunePx = Math.max(0, parseFloat($('opt-prune').value) || 0);
+      const invert = $('opt-invert').checked;
+
+      const region = state.crop || { x: 0, y: 0, w: state.sourceW, h: state.sourceH };
+      const scale = Math.min(1, MAX_SIDE / Math.max(region.w, region.h));
+      const W = Math.max(8, Math.round(region.w * scale));
+      const Hh = Math.max(8, Math.round(region.h * scale));
+
+      progress.textContent = '准备输入…';
+      await frame();
+      const c = document.createElement('canvas');
+      c.width = W; c.height = Hh;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(state.source, region.x, region.y, region.w, region.h, 0, 0, W, Hh);
+      const rgba = ctx.getImageData(0, 0, W, Hh).data;
+      let gray = HanziSkeleton.rgbaToGray(rgba, W, Hh);
+      if (invert) {
+        const g = new Uint8Array(gray.length);
+        for (let i = 0; i < gray.length; i++) g[i] = 255 - gray[i];
+        gray = g;
+      }
+
+      progress.textContent = '高斯平滑与 Otsu 二值化…';
+      await frame();
+      const t0 = performance.now();
+      const { result, mask, skeleton } = HanziSkeleton.analyze(gray, W, Hh,
+        { clean, minArea, prunePx, sigma: 1.0 });
+      const ms = Math.round(performance.now() - t0);
+
+      state.output = {
+        result, mask, skeleton, width: W, height: Hh,
+        imageDataUrl: c.toDataURL('image/jpeg', 0.88),
+      };
+      progress.textContent = `完成，用时 ${ms} ms（本页内计算，未上传）`;
+      resultCard.hidden = false;
+      renderResult();
+      resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (err) {
+      console.error(err);
+      progress.textContent = '处理失败：' + err.message;
+    } finally {
+      state.busy = false;
+      runBtn.disabled = false;
+    }
+  }
+
+  /* ---------------- result rendering ---------------- */
+
+  function binaryDataUrl(bits) {
+    const { width, height } = state.output;
+    const c = document.createElement('canvas');
+    c.width = width; c.height = height;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(width, height);
+    for (let i = 0; i < bits.length; i++) {
+      const v = bits[i] ? 255 : 0;
+      img.data[i * 4] = v; img.data[i * 4 + 1] = v; img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c.toDataURL('image/png');
+  }
+
+  function lazyBinary(key, bits) {
+    if (!state[key]) state[key] = binaryDataUrl(bits);
+    return state[key];
+  }
+
+  function renderResult() {
+    const o = state.output;
+    if (!o) return;
+    const mode = viewSel.value;
+    const { result, width, height } = o;
+    let svg = `<svg id="result-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" ` +
+      `role="img" aria-label="骨架叠加结果"><title>几何骨架，不代表真实笔顺</title>` +
+      `<rect width="100%" height="100%" fill="var(--background)"/>`;
+    if (mode === 'image') {
+      svg += `<image href="${o.imageDataUrl}" width="${width}" height="${height}"/>`;
+    } else if (mode === 'mask') {
+      svg += `<image href="${lazyBinary('_maskUrl', o.mask)}" width="${width}" height="${height}"/>`;
+    } else if (mode === 'skeleton') {
+      svg += `<image href="${lazyBinary('_skelUrl', o.skeleton)}" width="${width}" height="${height}"/>`;
+    } else {
+      svg += `<image href="${o.imageDataUrl}" width="${width}" height="${height}" opacity="0.42"/>`;
+      for (const e of result.edges) {
+        svg += `<polyline points="${e.display_points_xy.map((p) => p.join(',')).join(' ')}" ` +
+          `fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linejoin="round"/>`;
+        for (const [x, y] of e.sample_points_xy) {
+          svg += `<circle cx="${x}" cy="${y}" r="2.9" fill="var(--orange)" stroke="var(--background)" stroke-width="1"/>`;
+        }
+      }
+      for (const n of result.nodes) {
+        if (n.type === 'junction') {
+          svg += `<rect x="${n.x - 3.4}" y="${n.y - 3.4}" width="6.8" height="6.8" rx="1" ` +
+            `fill="var(--red)" stroke="var(--background)" stroke-width="1"/>`;
+        } else {
+          svg += `<circle cx="${n.x}" cy="${n.y}" r="${n.type === 'isolated' ? 2.3 : 3.5}" ` +
+            `fill="${n.type === 'endpoint' ? 'var(--green)' : n.type === 'isolated' ? 'var(--gray)' : 'var(--orange)'}" ` +
+            `stroke="var(--background)" stroke-width="1"/>`;
+        }
+      }
+      if (result.centroid_xy) {
+        const [x, y] = result.centroid_xy;
+        svg += `<path d="M0 ${y}H${width} M${x} 0V${height}" fill="none" stroke="var(--purple)" ` +
+          `stroke-width="1.2" stroke-dasharray="8 6"/>` +
+          `<circle cx="${x}" cy="${y}" r="6.5" fill="none" stroke="var(--purple)" stroke-width="1.7"/>`;
+      }
+    }
+    svg += '</svg>';
+    stage.innerHTML = svg;
+    legend.hidden = mode !== 'overlay';
+    const s = result.statistics;
+    statsEl.textContent =
+      `${s.nodes} 个几何节点 · ${s.edges} 条骨架边 · ${s.components} 个连通分量 · ` +
+      `Otsu 阈值 ${result.parameters.threshold_otsu.toFixed(3)}（均非笔画数量）`;
+  }
+
+  /* ---------------- exports ---------------- */
+
+  function overlaySvgText() {
+    const o = state.output;
+    const { result, width, height } = o;
+    const colors = { endpoint: '#16a477', junction: '#dc285e', isolated: '#77818c',
+                     cycle_anchor: '#d78a12', sample: '#e69a27', edge: '#2474b8', center: '#9c38b7' };
+    const out = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">`,
+      '<title>Computed geometric skeleton; not inferred stroke order</title>',
+      `<rect width="${width}" height="${height}" fill="white"/>`,
+      `<image width="${width}" height="${height}" opacity="0.3" href="${o.imageDataUrl}"/>`];
+    for (const e of result.edges) {
+      const pts = e.display_points_xy.map((p) => p.join(',')).join(' ');
+      out.push(`<polyline points="${pts}" fill="none" stroke="${colors.edge}" stroke-width="1.4"/>`);
+      for (const [x, y] of e.sample_points_xy) {
+        out.push(`<circle cx="${x}" cy="${y}" r="2.8" fill="${colors.sample}" stroke="white"/>`);
+      }
+    }
+    for (const n of result.nodes) {
+      out.push(`<circle cx="${n.x}" cy="${n.y}" r="3.5" fill="${colors[n.type]}" stroke="white"/>`);
+    }
+    if (result.centroid_xy) {
+      const [x, y] = result.centroid_xy;
+      out.push(`<path d="M0 ${y}H${width} M${x} 0V${height}" stroke="${colors.center}" stroke-dasharray="8 6"/>`);
+      out.push(`<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="${colors.center}"/>`);
+    }
+    out.push('</svg>');
+    return out.join('\n');
+  }
+
+  function download(name, mime, data) {
+    const a = document.createElement('a');
+    if (typeof data === 'string' && !data.startsWith('data:')) {
+      data = URL.createObjectURL(new Blob([data], { type: mime }));
+    }
+    a.href = data;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  document.querySelectorAll('[data-dl]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const o = state.output;
+      if (!o) return;
+      const name = btn.dataset.dl;
+      if (name === 'graph.json') {
+        download(name, 'application/json',
+          JSON.stringify(o.result, null, 2));
+      } else if (name === 'overlay.svg') {
+        download(name, 'image/svg+xml', overlaySvgText());
+      } else if (name === 'mask.png') {
+        download(name, 'image/png', lazyBinary('_maskUrl', o.mask));
+      } else if (name === 'skeleton.png') {
+        download(name, 'image/png', lazyBinary('_skelUrl', o.skeleton));
+      }
+    });
+  });
+
+  /* ---------------- wiring ---------------- */
+
+  drop.addEventListener('click', (ev) => {
+    if (ev.target === demoBtn) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => loadFile(input.files[0]);
+    input.click();
+  });
+  drop.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') drop.click();
+  });
+  ['dragenter', 'dragover'].forEach((t) =>
+    drop.addEventListener(t, (ev) => { ev.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((t) =>
+    drop.addEventListener(t, (ev) => { ev.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (ev) => loadFile(ev.dataTransfer.files[0]));
+  window.addEventListener('paste', (ev) => {
+    const item = [...(ev.clipboardData ? ev.clipboardData.items : [])]
+      .find((i) => i.type.startsWith('image/'));
+    if (item) loadFile(item.getAsFile());
+  });
+  demoBtn.addEventListener('click', (ev) => { ev.stopPropagation(); makeDemo(); });
+  runBtn.addEventListener('click', run);
+  viewSel.addEventListener('change', renderResult);
+})();
+</script>
+</body>
+</html>
