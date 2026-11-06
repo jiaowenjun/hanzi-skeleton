@@ -11,12 +11,9 @@
  * Usage: node scripts/compare_port.mjs [--ref work/port-ref]
  * Exit code 0 only if every stage passes its tolerance.
  */
-import { createRequire } from 'node:module';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-
-const require = createRequire(import.meta.url);
-const H = require('../web/pipeline.js');
+import * as H from '../web/src/pipeline.js';
 
 const REF = process.argv.includes('--ref')
   ? resolve(process.argv[process.argv.indexOf('--ref') + 1])

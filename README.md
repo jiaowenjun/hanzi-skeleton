@@ -38,14 +38,23 @@ uv run python rubbing_graph.py data/original/sample2.jpg \
 
 在线版：**<https://jiaowenjun.github.io/hanzi-skeleton/>**（GitHub Pages，由 `.github/workflows/deploy-pages.yml` 在 `web/` 变更时自动部署）。
 
-也可以直接打开 [web/app.html](web/app.html)（本地双击或任意静态服务均可，需与 `web/pipeline.js` 同目录）：
+也可以用本地构建产物：`pnpm build` 生成的 `web/dist/index.html` 是自包含单文件（vite-plugin-singlefile 内联全部 JS/CSS），双击即可离线打开。
 
 - 选择、拖入或粘贴拓片照片，在图上拖框裁切单字；黑字白底可勾选「反相」（默认按裁切区域自动猜测）。
 - 全部计算在浏览器本地完成，图片不上传；720×720 图片约零点几秒。
 - 支持轻度去噪与剪枝两种方式及 `min-area`、`prune-px` 参数，可导出与命令行一致的 `graph.json`、`overlay.svg`、`mask.png`、`skeleton.png`。
 - 页面内置程序生成的合成示例字，可直接试用；受权限制约，页面不附带三张真实样本图。
 
-浏览器版是 `rubbing_graph.py` 的逐阶段等价移植（[web/pipeline.js](web/pipeline.js)，零依赖）：在三张样本 × 两种处理方式上，高斯平滑、Otsu 阈值与距离变换与参考实现 bit 级一致，二值图、Zhang 骨架逐像素零差异，图结构（节点、边、统计）完全相同。已知偏差：浏览器与 PIL 的 JPEG 解码器存在 ±1 灰度差，直接处理未量化的原图时边界像素可能少量不同。复现对比：
+前端由 [Vite](https://vitejs.dev) + [pnpm](https://pnpm.io/) 管理（源码在 `web/src/`，算法移植为纯 ES 模块 `web/src/pipeline.js`，零运行时依赖）：
+
+```bash
+cd web
+pnpm install      # 需 pnpm ≥ 12（Node ≥ 20.19）
+pnpm dev          # 本地开发服务器
+pnpm build        # 生成自包含单文件 dist/index.html
+```
+
+浏览器版是 `rubbing_graph.py` 的逐阶段等价移植：在三张样本 × 两种处理方式上，高斯平滑、Otsu 阈值与距离变换与参考实现 bit 级一致，二值图、Zhang 骨架逐像素零差异，图结构（节点、边、统计）完全相同。已知偏差：浏览器与 PIL 的 JPEG 解码器存在 ±1 灰度差，直接处理未量化的原图时边界像素可能少量不同。复现对比：
 
 ```bash
 uv run python scripts/compare_port.py   # 导出 Python 参考的各阶段中间结果
@@ -81,10 +90,15 @@ hanzi-skeleton/
 │   ├── original/             # 用户提供的三张完整参考图片
 │   └── samples.json          # 文件来源、SHA-256 和人工裁切框
 ├── web/
-│   ├── app.html              # 纯浏览器单页应用（上传/裁切/参数/导出）
-│   ├── pipeline.js           # analyze 全管线的零依赖 JS 移植
-│   ├── graph.fragment.html   # 查看器内容与交互代码
-│   └── viewer-shell.html     # 独立页面外壳及样式
+│   ├── index.html            # 浏览器版入口（Vite）
+│   ├── src/
+│   │   ├── pipeline.js       # analyze 全管线的零依赖 ES 模块移植
+│   │   ├── main.js           # 页面逻辑（上传/裁切/参数/导出）
+│   │   └── style.css         # 页面样式
+│   ├── package.json          # 前端依赖与脚本（pnpm + Vite）
+│   ├── pnpm-lock.yaml        # 锁定的前端依赖版本
+│   ├── graph.fragment.html   # 查看器内容与交互代码（build_demo 使用）
+│   └── viewer-shell.html     # 独立页面外壳及样式（build_demo 使用）
 ├── results/
 │   ├── index.html            # 可独立打开的交互结果
 │   ├── comparison.png        # 三张图的静态对比

@@ -95,3 +95,13 @@
 已知且接受的差异：浏览器与 PIL 的 JPEG 解码器 IDCT 实现有 ±1 灰度差；浏览器对手机照片默认应用 EXIF 方向而 PIL 不应用。两者只影响「从原图解码」这一步，不影响算法本身；对拍通过注入相同的灰度字节消除该变量。页面处理尺寸上限 1000px（等比缩放），因为参数以约 700px 宽为基准；超过时页面会提示。
 
 浏览器版 UI 验证：合成示例（含横、撇、竖弯钩、方框环、点与石花噪声）端到端渲染正确，骨架沿笔画中心、方框形成闭合环、节点/采样点/质心可见；真实样本拖入、裁切 720×720、反相自动猜测（基于裁切区域而非整图，避免明亮纸边误导；用户手动修改后不再覆盖）、提取与导出按钮均工作正常。页面内置合成示例而未附带真实样本图，因 README 已说明后者不具再发布授权。
+
+## 前端改用 Vite + pnpm 管理
+
+`web/` 从「双击即开的纯静态页」重构为标准 Vite 项目，Python 部分与 `graph.fragment.html`/`viewer-shell.html`（build_demo.py 的查看器输入）不受影响：
+
+- `pipeline.js` 由 UMD 改为纯 ES 模块（`web/src/pipeline.js`）：算法零改动，仅去掉包装层并 `export`；`scripts/compare_port.mjs` 改为直接 `import`（Node ESM），重跑对拍仍全绿。
+- `app.html` 拆为 `index.html`（标记）+ `src/main.js`（页面逻辑）+ `src/style.css`（样式），入口为 module script。
+- 依赖仅两个 devDependencies：`vite` 与 `vite-plugin-singlefile`；后者把构建产物内联成自包含的 `dist/index.html`，保留「双击离线可开」的旧属性（内联 module script 不受 file:// 的模块加载限制）。
+- pnpm 12 的两个注意点：package.json 的 `pnpm` 字段已废弃，设置须写入 `pnpm-workspace.yaml`；依赖构建脚本默认被拦，`allowBuilds: {esbuild: true}` 用映射而非列表语法。
+- Pages 工作流改为 pnpm/action-setup + setup-node（缓存 pnpm-lock）→ `pnpm install --frozen-lockfile && pnpm build` → 上传 `web/dist`；`base` 设为 `/hanzi-skeleton/`。
