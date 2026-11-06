@@ -117,3 +117,16 @@
 - 函数体逐行未改，仅按职责拆分与搬移；删除根目录残留的 `hanzi_skeleton.egg-info/` 与 `__pycache__/`。
 
 重构验证：`uv sync` 重装后 CLI 输出与之前一致（图二 88/83/7）；`compare_port` 对拍全绿；`build_demo.py` 重建的 results 全部 40 个文件与重构前 MD5 逐字节相同。历史条目中的 `rubbing_graph.py` 字样保留原貌，作为当时记录。
+
+## 前端 UI 层迁移到 React + shadcn/ui + Tailwind CSS
+
+浏览器版 UI 从原生 JS/DOM 重写为 React 19 组件树，构建链升级为 Vite + @vitejs/plugin-react + Tailwind v4（@tailwindcss/vite，CSS-first 配置），组件基座用 shadcn/ui（radix 基础、lucide 图标，`pnpm dlx shadcn add` 落盘 button/card/input/checkbox/label/select/separator 源码到 `src/components/ui/`）。结构与职责：
+
+- `App.tsx`：页面状态（图片来源、裁切框、参数、反相、进度、输出）与运行流程。
+- `components/DropZone.tsx`：选择/拖入/粘贴与合成示例；`CropStage.tsx`：canvas 拖框裁切（鼠标+触摸）；`ResultView.tsx`：视图切换、声明式 SVG 叠加渲染、图例、统计与四类导出。
+- `lib/app-utils.ts`：纯工具（反相猜测、示例字生成、二值图 dataURL、overlay.svg 导出文本）。
+- `src/pipeline.js` 原位未动：无框架依赖、被 compare_port 对拍锁定，UI 层只经导入调用。
+
+保留的行为：亮/暗随系统（shadcn oklch 变量 + `@custom-variant dark (prefers-color-scheme)`，替代原手写 CSS 媒体查询）、vite-plugin-singlefile 单文件构建（React 运行时一并内联，离线双击可开，约 426KB/gzip 136KB）、反相自动猜测按裁切区域且手动后不覆盖、MAX_SIDE=1000 缩放提示。调整：nova 预设的 Geist 字体替换为系统字体栈（页面为中文，Geist 无 CJK 字形且会破坏单文件内联）。
+
+适配记录：@vitejs/plugin-react 6.x 需要 vite 8（imports vite/internal），降到 ^5 配 vite 7；shadcn init 需先装 Tailwind 并配置 tsconfig paths（`@/*`）；`.dark {}` 变量块迁到 `@media (prefers-color-scheme: dark)` 时要补一个闭合括号。验证：preview 端到端冒烟（合成示例 151ms，10 节点/9 边/2 分量，与旧版一致）、叠加渲染目视检查、compare_port 对拍全绿。
