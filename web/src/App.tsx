@@ -100,7 +100,7 @@ export default function App() {
   }, [source, region, invert, clean, minArea, prunePx]);
 
   return (
-    <main className="mx-auto max-w-[900px] px-4 pb-12 pt-6">
+    <main className={`mx-auto px-4 pb-12 pt-6 ${output ? 'max-w-[1160px]' : 'max-w-[900px]'}`}>
       <h1 className="mb-1 text-xl font-semibold">拓片字形骨架分析</h1>
       <p className="mb-4 text-[13px] text-muted-foreground">
         在浏览器本地把亮色字形提取为几何骨架图。图片不会上传；蓝线是几何中心线，不是历史笔顺，节点数也不是笔画数。
@@ -109,7 +109,8 @@ export default function App() {
       <DropZone onImage={acceptImage} />
 
       {source && (
-        <Card className="mt-3.5 p-3.5">
+        <div className={`mt-3.5 grid items-start gap-3.5 ${output ? 'lg:grid-cols-2' : ''}`}>
+        <Card className="p-3.5">
           <h2 className="mb-2 text-[15px] font-semibold">
             裁切单字{' '}
             <span className="text-xs font-normal text-muted-foreground">（在图上拖一个框，留空则处理全图）</span>
@@ -169,9 +170,9 @@ export default function App() {
           </div>
           <p className="mt-1.5 min-h-5 text-[13px] text-primary" aria-live="polite">{progress}</p>
         </Card>
+        {output && <ResultView output={output} />}
+        </div>
       )}
-
-      {output && <div className="mt-3.5"><ResultView output={output} /></div>}
 
       <footer className="mt-7 text-xs leading-relaxed text-muted-foreground">
         本页为纯前端实现：算法与命令行版（src/hanzi_skeleton）逐阶段对齐，可在仓库中用{' '}

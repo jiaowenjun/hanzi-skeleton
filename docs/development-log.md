@@ -130,3 +130,7 @@
 保留的行为：亮/暗随系统（shadcn oklch 变量 + `@custom-variant dark (prefers-color-scheme)`，替代原手写 CSS 媒体查询）、vite-plugin-singlefile 单文件构建（React 运行时一并内联，离线双击可开，约 426KB/gzip 136KB）、反相自动猜测按裁切区域且手动后不覆盖、MAX_SIDE=1000 缩放提示。调整：nova 预设的 Geist 字体替换为系统字体栈（页面为中文，Geist 无 CJK 字形且会破坏单文件内联）。
 
 适配记录：@vitejs/plugin-react 6.x 需要 vite 8（imports vite/internal），降到 ^5 配 vite 7；shadcn init 需先装 Tailwind 并配置 tsconfig paths（`@/*`）；`.dark {}` 变量块迁到 `@media (prefers-color-scheme: dark)` 时要补一个闭合括号。验证：preview 端到端冒烟（合成示例 151ms，10 节点/9 边/2 分量，与旧版一致）、叠加渲染目视检查、compare_port 对拍全绿。
+
+## 响应式双栏布局
+
+结果产出后，宽屏（≥1024px）改为左右双栏：左栏裁切/参数卡片、右栏结果卡片（`lg:grid-cols-2`，容器加宽至 1160px）；窄屏与无结果时保持单栏。裁切 canvas 补 `h-auto` 保证在半栏宽度下等比缩放。已验证宽屏双栏（grid-template-columns 557px×2、顶部对齐）与 430px 窄屏上下堆叠（无横向溢出）。

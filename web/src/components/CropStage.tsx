@@ -81,7 +81,7 @@ export function CropStage({ source, sourceW, sourceH, crop, onCropChange, onCrop
     <div className="flex justify-center">
       <canvas
         ref={canvasRef}
-        className="max-w-full touch-none rounded-md border bg-[repeating-conic-gradient(var(--muted)_0%_25%,var(--background)_0%_50%)] bg-[length:20px_20px]"
+        className="h-auto max-w-full touch-none rounded-md border bg-[repeating-conic-gradient(var(--muted)_0%_25%,var(--background)_0%_50%)] bg-[length:20px_20px]"
         onMouseDown={start}
         onMouseMove={move}
         onMouseUp={end}
