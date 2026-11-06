@@ -36,7 +36,9 @@ uv run python rubbing_graph.py data/original/sample2.jpg \
 
 ## 浏览器版（无需安装）
 
-直接打开 [web/app.html](web/app.html)（本地双击或任意静态服务均可，需与 `web/pipeline.js` 同目录）：
+在线版：**<https://jiaowenjun.github.io/hanzi-skeleton/>**（GitHub Pages，由 `.github/workflows/deploy-pages.yml` 在 `web/` 变更时自动部署）。
+
+也可以直接打开 [web/app.html](web/app.html)（本地双击或任意静态服务均可，需与 `web/pipeline.js` 同目录）：
 
 - 选择、拖入或粘贴拓片照片，在图上拖框裁切单字；黑字白底可勾选「反相」（默认按裁切区域自动猜测）。
 - 全部计算在浏览器本地完成，图片不上传；720×720 图片约零点几秒。
