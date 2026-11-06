@@ -111,10 +111,6 @@ export default function App() {
       {source && (
         <div className={`mt-3.5 grid items-start gap-3.5 ${output ? 'lg:grid-cols-2' : ''}`}>
         <Card className="p-3.5">
-          <h2 className="mb-2 text-[15px] font-semibold">
-            裁切单字{' '}
-            <span className="text-xs font-normal text-muted-foreground">（在图上拖一个框，留空则处理全图）</span>
-          </h2>
           <CropStage
             source={source}
             sourceW={sourceW}
@@ -123,6 +119,10 @@ export default function App() {
             onCropChange={setCrop}
             onCropEnd={onCropEnd}
           />
+          <h2 className="mt-2.5 text-[15px] font-semibold">
+            裁切单字{' '}
+            <span className="text-xs font-normal text-muted-foreground">（在图上拖一个框，留空则处理全图）</span>
+          </h2>
           <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={() => { setCrop(null); onCropEnd(); }}>
               重置为全图

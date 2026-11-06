@@ -81,7 +81,9 @@ export function CropStage({ source, sourceW, sourceH, crop, onCropChange, onCrop
     <div className="flex justify-center">
       <canvas
         ref={canvasRef}
-        className="h-auto max-w-full touch-none rounded-md border bg-[repeating-conic-gradient(var(--muted)_0%_25%,var(--background)_0%_50%)] bg-[length:20px_20px]"
+        // Fills the card width so it lines up with the result SVG beside it;
+        // the 660px cap only applies in single-column mode.
+        className="mx-auto h-auto w-full max-w-[660px] touch-none rounded-md border bg-[repeating-conic-gradient(var(--muted)_0%_25%,var(--background)_0%_50%)] bg-[length:20px_20px]"
         onMouseDown={start}
         onMouseMove={move}
         onMouseUp={end}

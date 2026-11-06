@@ -75,21 +75,6 @@ export function ResultView({ output }: ResultViewProps) {
 
   return (
     <Card className="p-3.5">
-      <div className="mb-3 flex flex-wrap items-end gap-2.5">
-        <div className="grid gap-1">
-          <span className="text-xs text-muted-foreground">显示</span>
-          <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {VIEWS.map((v) => (
-                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {view === 'overlay' && <div className="ml-auto"><Legend /></div>}
-      </div>
-
       <div className="flex justify-center">
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -150,6 +135,21 @@ export function ResultView({ output }: ResultViewProps) {
             </>
           )}
         </svg>
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-end gap-2.5">
+        <div className="grid gap-1">
+          <span className="text-xs text-muted-foreground">显示</span>
+          <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VIEWS.map((v) => (
+                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {view === 'overlay' && <div className="ml-auto"><Legend /></div>}
       </div>
 
       <p className="mt-2 min-h-5 text-xs text-muted-foreground" aria-live="polite">
