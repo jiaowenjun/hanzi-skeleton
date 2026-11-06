@@ -16,8 +16,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from rubbing_graph import analyze, render_overlay, save_results
+sys.path.insert(0, str(ROOT / 'src'))
+from hanzi_skeleton import analyze, render_overlay, save_results
 
 
 def validate_graph(result):

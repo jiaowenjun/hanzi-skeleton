@@ -1,5 +1,5 @@
 /**
- * hanzi-skeleton browser pipeline — a faithful JavaScript port of rubbing_graph.py.
+ * hanzi-skeleton browser pipeline — a faithful JavaScript port of the Python reference (hanzi_skeleton.pipeline).
  *
  * Every stage replicates the numeric behaviour of the pinned Python stack
  * (numpy 2.5 / scipy 1.18 / scikit-image 0.26 / sknw 0.15) so that the two
@@ -13,7 +13,7 @@
  *   distance       exact EDT (Felzenszwalb); outside the array is NOT background
  *   skeletonize    scikit-image Zhang-Suen LUT thinning (parallel two-phase)
  *   graph          sknw mark/fill/trace/parse_struc, raster order preserved
- *   pruning        rubbing_graph.prune_short_leaves, MultiGraph degree semantics
+ *   pruning        hanzi_skeleton.pipeline prune_short_leaves, MultiGraph degree semantics
  *
  * ES module: imported by src/main.js (bundled by Vite) and directly by
  * scripts/compare_port.mjs (Node ESM) for the parity harness.
@@ -280,7 +280,7 @@ function labelComponents(mask, width, height, connectivity) {
   return { labels, count: next };
 }
 
-/** rubbing_graph.remove_specks: drop 8-connected components below min_area. */
+/** hanzi_skeleton.pipeline.remove_specks: drop 8-connected components below min_area. */
 function removeSpecks(mask, width, height, minArea) {
   const { labels, count } = labelComponents(mask, width, height, 2);
   const sizes = new Int32Array(count + 1);
@@ -324,7 +324,7 @@ function closingCross(mask, width, height) {
   return out;
 }
 
-/** rubbing_graph.fill_small_holes: fill 4-connected background components
+/** hanzi_skeleton.pipeline.fill_small_holes: fill 4-connected background components
  *  of size <= max_area unless they touch the image border. */
 function fillSmallHoles(mask, width, height, maxArea) {
   const bg = new Uint8Array(mask.length);
@@ -736,7 +736,7 @@ class MultiGraph {
 }
 
 /* ------------------------------------------------------------------ *
- * rubbing_graph.prune_short_leaves
+ * hanzi_skeleton.pipeline.prune_short_leaves
  * ------------------------------------------------------------------ */
 
 function pruneShortLeaves(skeleton, width, height, distance, maxLength, iterations) {
@@ -821,7 +821,7 @@ function approximatePolygon(coords, tolerance) {
 }
 
 /* ------------------------------------------------------------------ *
- * rubbing_graph.analyze — the full pipeline and JSON-shaped result.
+ * hanzi_skeleton.pipeline.analyze — the full pipeline and JSON-shaped result.
  * gray: Uint8Array (PIL 'L'); opts: { clean, minArea, prunePx, sigma }
  * ------------------------------------------------------------------ */
 

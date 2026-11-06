@@ -22,7 +22,7 @@ from scipy import ndimage as ndi
 from skimage.filters import gaussian, threshold_otsu
 from skimage.morphology import closing, disk, skeletonize
 
-import rubbing_graph as rg
+from hanzi_skeleton import pipeline as rg
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'work' / 'port-ref'

@@ -105,3 +105,15 @@
 - 依赖仅两个 devDependencies：`vite` 与 `vite-plugin-singlefile`；后者把构建产物内联成自包含的 `dist/index.html`，保留「双击离线可开」的旧属性（内联 module script 不受 file:// 的模块加载限制）。
 - pnpm 12 的两个注意点：package.json 的 `pnpm` 字段已废弃，设置须写入 `pnpm-workspace.yaml`；依赖构建脚本默认被拦，`allowBuilds: {esbuild: true}` 用映射而非列表语法。
 - Pages 工作流改为 pnpm/action-setup + setup-node（缓存 pnpm-lock）→ `pnpm install --frozen-lockfile && pnpm build` → 上传 `web/dist`；`base` 设为 `/hanzi-skeleton/`。
+
+## 目录结构整理：Python 侧打包为 src 布局
+
+将仓库根目录的单文件 `rubbing_graph.py` 重组为标准 `src/` 布局的包 `src/hanzi_skeleton/`，与前端 `web/`（Vite + pnpm）形成清晰的双子目录结构：
+
+- `pipeline.py`：分割、骨架化、图构建、短枝剪枝与 `analyze()`（核心算法，与浏览器移植对拍的基准）。
+- `render.py`：`COLORS`、`render_overlay`、`render_svg`、`save_results`。
+- `cli.py`：`hanzi-skeleton` 命令入口（pyproject 指向 `hanzi_skeleton.cli:main`）。
+- `__init__.py` 保持与原模块一致的公共 API（analyze、build_graph、剪枝与渲染函数），脚本按 `from hanzi_skeleton import ...` 或 `from hanzi_skeleton import pipeline` 导入。
+- 函数体逐行未改，仅按职责拆分与搬移；删除根目录残留的 `hanzi_skeleton.egg-info/` 与 `__pycache__/`。
+
+重构验证：`uv sync` 重装后 CLI 输出与之前一致（图二 88/83/7）；`compare_port` 对拍全绿；`build_demo.py` 重建的 results 全部 40 个文件与重构前 MD5 逐字节相同。历史条目中的 `rubbing_graph.py` 字样保留原貌，作为当时记录。

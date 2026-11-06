@@ -18,8 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hanzi-skeleton = "rubbing_graph:main"
+hanzi-skeleton = "hanzi_skeleton.cli:main"
 
-[tool.setuptools]
-py-modules = ["rubbing_graph"]
-
+[tool.setuptools.packages.find]
+where = ["src"]

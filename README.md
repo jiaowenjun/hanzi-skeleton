@@ -23,13 +23,6 @@ uv run hanzi-skeleton data/original/sample2.jpg \
   --crop 12 12 732 701 --out work/sample2
 ```
 
-也可以直接运行脚本：
-
-```bash
-uv run python rubbing_graph.py data/original/sample2.jpg \
-  --crop 12 12 732 701 --out work/sample2
-```
-
 输出 `input.png`、`mask.png`、`skeleton.png`、`overlay.png`、`overlay.svg` 和 `graph.json`。可用 `--raw` 跳过去噪与剪枝，或用 `--min-area 80 --prune-px 12` 调整参数。
 
 `--crop` 顺序为左、上、右、下，右、下不包含；已裁好的单字图片可省略。当前处理方向为亮字暗底，黑字白底需先反相。面积和长度参数以约 700 像素宽图片为基准。
@@ -54,7 +47,7 @@ pnpm dev          # 本地开发服务器
 pnpm build        # 生成自包含单文件 dist/index.html
 ```
 
-浏览器版是 `rubbing_graph.py` 的逐阶段等价移植：在三张样本 × 两种处理方式上，高斯平滑、Otsu 阈值与距离变换与参考实现 bit 级一致，二值图、Zhang 骨架逐像素零差异，图结构（节点、边、统计）完全相同。已知偏差：浏览器与 PIL 的 JPEG 解码器存在 ±1 灰度差，直接处理未量化的原图时边界像素可能少量不同。复现对比：
+浏览器版是 Python 参考实现（`src/hanzi_skeleton/pipeline.py`）的逐阶段等价移植：在三张样本 × 两种处理方式上，高斯平滑、Otsu 阈值与距离变换与参考实现 bit 级一致，二值图、Zhang 骨架逐像素零差异，图结构（节点、边、统计）完全相同。已知偏差：浏览器与 PIL 的 JPEG 解码器存在 ±1 灰度差，直接处理未量化的原图时边界像素可能少量不同。复现对比：
 
 ```bash
 uv run python scripts/compare_port.py   # 导出 Python 参考的各阶段中间结果
@@ -79,7 +72,10 @@ open results/index.html
 
 ```text
 hanzi-skeleton/
-├── rubbing_graph.py          # 分割、骨架、图构建、导出与 CLI（参考实现）
+├── src/hanzi_skeleton/       # Python 参考实现（uv 管理依赖）
+│   ├── pipeline.py           # 分割、骨架化、图构建、剪枝与 analyze
+│   ├── render.py             # overlay 渲染与结果导出
+│   └── cli.py                # hanzi-skeleton 命令行入口
 ├── pyproject.toml            # 包信息、依赖声明和 hanzi-skeleton 命令入口
 ├── uv.lock                   # 锁定的依赖版本（含传递依赖）
 ├── scripts/
@@ -89,13 +85,13 @@ hanzi-skeleton/
 ├── data/
 │   ├── original/             # 用户提供的三张完整参考图片
 │   └── samples.json          # 文件来源、SHA-256 和人工裁切框
-├── web/
-│   ├── index.html            # 浏览器版入口（Vite）
+├── web/                      # 浏览器版（Vite + pnpm 管理）
+│   ├── index.html            # 入口
 │   ├── src/
 │   │   ├── pipeline.js       # analyze 全管线的零依赖 ES 模块移植
 │   │   ├── main.js           # 页面逻辑（上传/裁切/参数/导出）
 │   │   └── style.css         # 页面样式
-│   ├── package.json          # 前端依赖与脚本（pnpm + Vite）
+│   ├── package.json          # 前端依赖与脚本
 │   ├── pnpm-lock.yaml        # 锁定的前端依赖版本
 │   ├── graph.fragment.html   # 查看器内容与交互代码（build_demo 使用）
 │   └── viewer-shell.html     # 独立页面外壳及样式（build_demo 使用）
